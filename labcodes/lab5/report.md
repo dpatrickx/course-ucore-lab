@@ -62,9 +62,29 @@ jmp __trapret
 
 ## [练习3] 阅读分析源代码，理解进程执行 fork/exec/wait/exit 的实现，以及系统调用的实现
 
-#### 简要说明对 fork/exec/wait/exit函数的分析
+#### 简要说明对 fork/exec/wait/exit函数的分析，以及系统调用的实现
+
+**fork/exec/wait/exit分析**
+
+fork/wait/exit在ulib.c中实现，分别调用sys_fork/sys_wait/sys_exit来实现；exec通过kernel_execve函数来触发系统调用，转到内核态下的sys_exec。
+
+sys_fork等函数调用了do_fork/do_wait/do_exit/do_execve函数，这四个函数调用用户态下的syscall，之后通过内联汇编进行系统调用，之后把控制权交给操作系统。
+
+**系统调用分析**
+
+系统调用实现在syscall.c中，在```syscall()```函数中会完成寄存器的保存，并将```syscalls```中的某一函数指针作为参数传入。即```syscall```是系统对系统调用的一个封装，在遇到中断时操作系统就会调用```syscall```函数。
+
+系统调用的流程为: 内联汇编给出```syscall```指令 -> 操作系统根据中断号调用```syscall```函数 -> ```syscall```函数根据寄存器的值选择相应的异常处理例程。
 
 #### 请分析fork/exec/wait/exit在实现中是如何影响进程的执行状态的？
+
+fork: 将进程状态转为“可执行” ，为进程分配资源；
+
+exec: 为进程装入执行内容；
+
+wait: 进程进入“睡眠”状态，并需要释放“僵尸”状态的子进程
+
+exit: 进程进入“僵尸”状态，唤醒父进程
 
 #### 请给出ucore中一个用户态进程的执行状态生命周期图
 
